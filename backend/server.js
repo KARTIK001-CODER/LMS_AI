@@ -1,19 +1,28 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+
 const app = express();
-const authRoutes = require("./routes/authRoutes");
 const db = require("./db");
+const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 
-app.use("/profile", profileRoutes);
-app.use(cors());
+// ✅ Middleware MUST come BEFORE routes
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
+
+// Routes
 app.use("/auth", authRoutes);
+app.use("/profile", profileRoutes);
 
 app.get("/", (req, res) => {
   res.send("AI LMS Backend is running");
 });
+
 app.get("/debug/tables", (req, res) => {
   db.all(
     "SELECT name FROM sqlite_master WHERE type='table';",
@@ -27,7 +36,7 @@ app.get("/debug/tables", (req, res) => {
   );
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
