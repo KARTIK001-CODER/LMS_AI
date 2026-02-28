@@ -1,48 +1,65 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
+import { sendChatMessage } from '../services/chatService';
+import { getToken } from '../services/authService';
 
-const AI_REPLIES = [
-    "I'm reviewing your profile now. How can I help?",
-    "Great question! Let me look into that for you.",
-    "Based on your profile, here's what I suggest...",
-    "I can help you with that. Could you tell me more?",
-    "Got it. Give me a moment to think about this.",
-];
-
-const ChatbotPanel = ({ onClose }) => {
+const ChatbotPanel = ({ onClose, onUpdate }) => {
     const [messages, setMessages] = useState([
         { id: 1, sender: 'ai', text: 'Hi! I\'m your AI learning assistant. Ask me anything about your profile or courses.' },
     ]);
     const [input, setInput] = useState('');
     const bottomRef = useRef(null);
 
+    const [isLoading, setIsLoading] = useState(false);
+
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const sendMessage = () => {
+    const sendMessage = async () => {
         const text = input.trim();
         if (!text) return;
 
         const userMsg = { id: Date.now(), sender: 'user', text };
-        const aiMsg = {
-            id: Date.now() + 1,
-            sender: 'ai',
-            text: AI_REPLIES[Math.floor(Math.random() * AI_REPLIES.length)],
-        };
-
         setMessages((prev) => [...prev, userMsg]);
         setInput('');
+        setIsLoading(true);
 
-        setTimeout(() => {
+        try {
+            const token = getToken();
+            const response = await sendChatMessage(token, text);
+
+            const replyText = response.reply || 'Sorry, I did not understand that.';
+            const aiMsg = {
+                id: Date.now() + 1,
+                sender: 'ai',
+                text: replyText,
+            };
             setMessages((prev) => [...prev, aiMsg]);
-        }, 600);
+
+            // If the response indicates an update, notify the parent to refresh profile
+            if (replyText.toLowerCase().includes('successfully') || replyText.toLowerCase().includes('updated') || replyText.toLowerCase().includes('saved')) {
+                onUpdate?.();
+            }
+        } catch (error) {
+            console.error('Chat error:', error);
+            const errorMsg = {
+                id: Date.now() + 1,
+                sender: 'ai',
+                text: 'Sorry, I am having trouble connecting to the server.',
+            };
+            setMessages((prev) => [...prev, errorMsg]);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            if (!isLoading) {
+                sendMessage();
+            }
         }
     };
 
@@ -67,6 +84,11 @@ const ChatbotPanel = ({ onClose }) => {
                 {messages.map((msg) => (
                     <ChatMessage key={msg.id} message={msg.text} sender={msg.sender} />
                 ))}
+                {isLoading && (
+                    <div style={{ padding: '8px 16px', color: '#6B7280', fontSize: '14px', fontStyle: 'italic' }}>
+                        Thinking...
+                    </div>
+                )}
                 <div ref={bottomRef} />
             </div>
 
@@ -82,9 +104,9 @@ const ChatbotPanel = ({ onClose }) => {
                     autoFocus
                 />
                 <button
-                    style={input.trim() ? styles.sendBtn : { ...styles.sendBtn, opacity: 0.4 }}
+                    style={input.trim() && !isLoading ? styles.sendBtn : { ...styles.sendBtn, opacity: 0.4 }}
                     onClick={sendMessage}
-                    disabled={!input.trim()}
+                    disabled={!input.trim() || isLoading}
                     aria-label="Send"
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
