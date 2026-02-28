@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import InfoSection from '../components/InfoSection';
+import ChatbotButton from '../components/ChatbotButton';
 import { getProfile } from '../services/profileService';
 
 const Field = ({ label, value }) => (
@@ -136,6 +137,8 @@ const Profile = () => {
                     </>
                 )}
             </main>
+
+            <ChatbotButton />
         </div>
     );
 };
