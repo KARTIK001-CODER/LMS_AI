@@ -6,6 +6,7 @@ const app = express();
 const db = require("./db");
 const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 // ✅ Middleware MUST come BEFORE routes
 app.use(cors({
@@ -18,6 +19,7 @@ app.use(express.json());
 // Routes
 app.use("/auth", authRoutes);
 app.use("/profile", profileRoutes);
+app.use("/chat", chatRoutes);
 
 app.get("/", (req, res) => {
   res.send("AI LMS Backend is running");
