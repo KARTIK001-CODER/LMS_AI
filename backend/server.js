@@ -1,17 +1,17 @@
 const express = require("express");
 const cors = require("cors");
-
+require("dotenv").config();
 const app = express();
+const authRoutes = require("./routes/authRoutes");
+const db = require("./db");
 
 app.use(cors());
 app.use(express.json());
+app.use("/auth", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("AI LMS Backend is running");
 });
-
-const db = require("./db");
-
 app.get("/debug/tables", (req, res) => {
   db.all(
     "SELECT name FROM sqlite_master WHERE type='table';",
