@@ -1,15 +1,20 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+const authHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+    };
+};
+
 export const getProfile = async () => {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('No token found');
 
     const response = await fetch(`${API_BASE_URL}/profile`, {
         method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-        },
+        headers: authHeaders(),
     });
 
     if (!response.ok) {
@@ -22,4 +27,38 @@ export const getProfile = async () => {
     }
 
     return response.json();
+};
+
+export const updatePersonal = async (data) => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+
+    const response = await fetch(`${API_BASE_URL}/profile/personal`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+    });
+
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(json.error || json.message || 'Failed to update personal info');
+    }
+    return json;
+};
+
+export const updateEducation = async (data) => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token found');
+
+    const response = await fetch(`${API_BASE_URL}/profile/education`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(data),
+    });
+
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(json.error || json.message || 'Failed to update education details');
+    }
+    return json;
 };
