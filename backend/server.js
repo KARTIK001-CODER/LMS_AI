@@ -10,6 +10,21 @@ app.get("/", (req, res) => {
   res.send("AI LMS Backend is running");
 });
 
+const db = require("./db");
+
+app.get("/debug/tables", (req, res) => {
+  db.all(
+    "SELECT name FROM sqlite_master WHERE type='table';",
+    [],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json(rows);
+    }
+  );
+});
+
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
