@@ -459,7 +459,7 @@ export default function Profile() {
             </main>
 
             {/* Floating AI Chatbot Button */}
-            <ChatbotButton />
+            <ChatbotButton onUpdate={fetchProfile} />
         </div>
     );
 }

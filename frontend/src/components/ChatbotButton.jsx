@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ChatbotPanel from './ChatbotPanel';
 
-const ChatbotButton = () => {
+const ChatbotButton = ({ onUpdate }) => {
     const [open, setOpen] = useState(false);
 
     return (
@@ -14,7 +14,7 @@ const ChatbotButton = () => {
         }
       `}</style>
 
-            {open && <ChatbotPanel onClose={() => setOpen(false)} />}
+            {open && <ChatbotPanel onClose={() => setOpen(false)} onUpdate={onUpdate} />}
 
             <button
                 style={styles.button}
