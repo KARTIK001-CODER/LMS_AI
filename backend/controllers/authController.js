@@ -74,7 +74,7 @@ const login = (req, res) => {
         console.log("[login] User found:", user.id, "| password field starts with:", user.password ? user.password.substring(0, 7) : "NULL");
         const isBcryptHash = user.password && user.password.startsWith("$2");
 
-        if (isBcryptHash) {n
+        if (isBcryptHash) {
             bcrypt.compare(password, user.password, (err, isMatch) => {
                 if (err) {
                     console.error("[login] bcrypt.compare error:", err.message);
