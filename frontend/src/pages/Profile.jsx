@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import InfoSection from '../components/InfoSection';
 import ChatbotButton from '../components/ChatbotButton';
-import { getProfile } from '../services/profileService';
+import { getProfile, updatePersonal, updateEducation } from '../services/profileService';
 
+/* ---------- Small display-only field ---------- */
 const Field = ({ label, value }) => (
     <div style={fieldStyles.row}>
         <span style={fieldStyles.label}>{label}</span>
@@ -14,12 +15,23 @@ const Field = ({ label, value }) => (
     </div>
 );
 
+/* ---------- Editable field ---------- */
+const EditField = ({ label, name, value, onChange }) => (
+    <div style={fieldStyles.row}>
+        <label style={fieldStyles.label}>{label}</label>
+        <input
+            style={fieldStyles.input}
+            type="text"
+            name={name}
+            value={value}
+            onChange={onChange}
+            placeholder={`Enter ${label.toLowerCase()}`}
+        />
+    </div>
+);
+
 const fieldStyles = {
-    row: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '3px',
-    },
+    row: { display: 'flex', flexDirection: 'column', gap: '4px' },
     label: {
         fontSize: '12px',
         color: '#9CA3AF',
@@ -27,19 +39,22 @@ const fieldStyles = {
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
     },
-    value: {
+    value: { fontSize: '15px', color: '#111827', fontWeight: '400' },
+    empty: { fontSize: '15px', color: '#D1D5DB', fontStyle: 'italic', fontWeight: '400' },
+    input: {
         fontSize: '15px',
         color: '#111827',
-        fontWeight: '400',
-    },
-    empty: {
-        fontSize: '15px',
-        color: '#D1D5DB',
-        fontStyle: 'italic',
-        fontWeight: '400',
+        border: '1px solid #E5E7EB',
+        borderRadius: '6px',
+        padding: '7px 10px',
+        outline: 'none',
+        width: '100%',
+        boxSizing: 'border-box',
+        backgroundColor: '#F9FAFB',
     },
 };
 
+/* ---------- Status pill (for course section) ---------- */
 const StatusPill = ({ status }) => {
     const map = {
         approved: { bg: '#F0FDF4', color: '#15803D' },
@@ -63,15 +78,44 @@ const pillStyle = {
     textTransform: 'capitalize',
 };
 
+/* ---------- Main component ---------- */
 const Profile = () => {
     const navigate = useNavigate();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
+    // Personal edit state
+    const [editingPersonal, setEditingPersonal] = useState(false);
+    const [personalForm, setPersonalForm] = useState({ full_name: '', phone: '', city: '' });
+    const [savingPersonal, setSavingPersonal] = useState(false);
+    const [personalError, setPersonalError] = useState('');
+
+    // Education edit state
+    const [editingEducation, setEditingEducation] = useState(false);
+    const [educationForm, setEducationForm] = useState({
+        tenth_board: '', tenth_percentage: '', twelfth_board: '', twelfth_percentage: '',
+    });
+    const [savingEducation, setSavingEducation] = useState(false);
+    const [educationError, setEducationError] = useState('');
+
+    const fetchProfile = () => {
+        setLoading(true);
         getProfile()
-            .then(setProfile)
+            .then((data) => {
+                setProfile(data);
+                setPersonalForm({
+                    full_name: data.personal?.full_name || '',
+                    phone: data.personal?.phone || '',
+                    city: data.personal?.city || '',
+                });
+                setEducationForm({
+                    tenth_board: data.education?.tenth_board || '',
+                    tenth_percentage: data.education?.tenth_percentage || '',
+                    twelfth_board: data.education?.twelfth_board || '',
+                    twelfth_percentage: data.education?.twelfth_percentage || '',
+                });
+            })
             .catch((err) => {
                 setError(err.message);
                 if (err.message === 'No token found' || err.message === 'Unauthorized') {
@@ -79,7 +123,62 @@ const Profile = () => {
                 }
             })
             .finally(() => setLoading(false));
-    }, [navigate]);
+    };
+
+    useEffect(() => { fetchProfile(); }, [navigate]);
+
+    /* --- Personal handlers --- */
+    const handlePersonalChange = (e) =>
+        setPersonalForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+    const handlePersonalSave = () => {
+        setPersonalError('');
+        setSavingPersonal(true);
+        updatePersonal(personalForm)
+            .then(() => {
+                setEditingPersonal(false);
+                fetchProfile();
+            })
+            .catch((err) => setPersonalError(err.message))
+            .finally(() => setSavingPersonal(false));
+    };
+
+    const handlePersonalCancel = () => {
+        setPersonalError('');
+        setPersonalForm({
+            full_name: profile?.personal?.full_name || '',
+            phone: profile?.personal?.phone || '',
+            city: profile?.personal?.city || '',
+        });
+        setEditingPersonal(false);
+    };
+
+    /* --- Education handlers --- */
+    const handleEducationChange = (e) =>
+        setEducationForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+    const handleEducationSave = () => {
+        setEducationError('');
+        setSavingEducation(true);
+        updateEducation(educationForm)
+            .then(() => {
+                setEditingEducation(false);
+                fetchProfile();
+            })
+            .catch((err) => setEducationError(err.message))
+            .finally(() => setSavingEducation(false));
+    };
+
+    const handleEducationCancel = () => {
+        setEducationError('');
+        setEducationForm({
+            tenth_board: profile?.education?.tenth_board || '',
+            tenth_percentage: profile?.education?.tenth_percentage || '',
+            twelfth_board: profile?.education?.twelfth_board || '',
+            twelfth_percentage: profile?.education?.twelfth_percentage || '',
+        });
+        setEditingEducation(false);
+    };
 
     return (
         <div style={styles.page}>
@@ -96,29 +195,64 @@ const Profile = () => {
 
                 {profile && (
                     <>
-                        {/* Personal */}
-                        <InfoSection title="Personal">
-                            <Field label="Name" value={profile.personal?.full_name} />
-                            <Field label="Email" value={profile.personal?.email} />
-                            <Field label="Phone" value={profile.personal?.phone} />
-                            <Field label="City" value={profile.personal?.city} />
-                        </InfoSection>
-
-                        {/* Education */}
-                        <InfoSection title="Education">
-                            {profile.education ? (
+                        {/* ---- Personal ---- */}
+                        <InfoSection
+                            title="Personal"
+                            onEdit={() => setEditingPersonal(true)}
+                            isEditing={editingPersonal}
+                            onSave={handlePersonalSave}
+                            onCancel={handlePersonalCancel}
+                            saving={savingPersonal}
+                        >
+                            {editingPersonal ? (
                                 <>
-                                    <Field label="10th Board" value={profile.education.tenth_board} />
-                                    <Field label="10th Percentage" value={profile.education.tenth_percentage ? `${profile.education.tenth_percentage}%` : null} />
-                                    <Field label="12th Board" value={profile.education.twelfth_board} />
-                                    <Field label="12th Percentage" value={profile.education.twelfth_percentage ? `${profile.education.twelfth_percentage}%` : null} />
+                                    <EditField label="Name" name="full_name" value={personalForm.full_name} onChange={handlePersonalChange} />
+                                    <EditField label="Phone" name="phone" value={personalForm.phone} onChange={handlePersonalChange} />
+                                    <EditField label="City" name="city" value={personalForm.city} onChange={handlePersonalChange} />
+                                    {personalError && <p style={styles.inlineError}>{personalError}</p>}
                                 </>
                             ) : (
-                                <p style={styles.missing}>No education details on file.</p>
+                                <>
+                                    <Field label="Name" value={profile.personal?.full_name} />
+                                    <Field label="Email" value={profile.personal?.email} />
+                                    <Field label="Phone" value={profile.personal?.phone} />
+                                    <Field label="City" value={profile.personal?.city} />
+                                </>
                             )}
                         </InfoSection>
 
-                        {/* Course */}
+                        {/* ---- Education ---- */}
+                        <InfoSection
+                            title="Education"
+                            onEdit={() => setEditingEducation(true)}
+                            isEditing={editingEducation}
+                            onSave={handleEducationSave}
+                            onCancel={handleEducationCancel}
+                            saving={savingEducation}
+                        >
+                            {editingEducation ? (
+                                <>
+                                    <EditField label="10th Board" name="tenth_board" value={educationForm.tenth_board} onChange={handleEducationChange} />
+                                    <EditField label="10th Percentage" name="tenth_percentage" value={educationForm.tenth_percentage} onChange={handleEducationChange} />
+                                    <EditField label="12th Board" name="twelfth_board" value={educationForm.twelfth_board} onChange={handleEducationChange} />
+                                    <EditField label="12th Percentage" name="twelfth_percentage" value={educationForm.twelfth_percentage} onChange={handleEducationChange} />
+                                    {educationError && <p style={styles.inlineError}>{educationError}</p>}
+                                </>
+                            ) : (
+                                profile.education ? (
+                                    <>
+                                        <Field label="10th Board" value={profile.education.tenth_board} />
+                                        <Field label="10th Percentage" value={profile.education.tenth_percentage ? `${profile.education.tenth_percentage}%` : null} />
+                                        <Field label="12th Board" value={profile.education.twelfth_board} />
+                                        <Field label="12th Percentage" value={profile.education.twelfth_percentage ? `${profile.education.twelfth_percentage}%` : null} />
+                                    </>
+                                ) : (
+                                    <p style={styles.missing}>No education details on file.</p>
+                                )
+                            )}
+                        </InfoSection>
+
+                        {/* ---- Course (read-only) ---- */}
                         <InfoSection title="Course">
                             {profile.course ? (
                                 <>
@@ -161,16 +295,18 @@ const styles = {
         margin: '0 0 28px 0',
         letterSpacing: '-0.3px',
     },
-    loading: {
-        color: '#9CA3AF',
-        fontSize: '15px',
-    },
+    loading: { color: '#9CA3AF', fontSize: '15px' },
     error: {
         color: '#B91C1C',
         backgroundColor: '#FEF2F2',
         padding: '12px 16px',
         borderRadius: '8px',
         fontSize: '14px',
+    },
+    inlineError: {
+        color: '#B91C1C',
+        fontSize: '13px',
+        margin: '4px 0 0',
     },
     missing: {
         color: '#9CA3AF',
