@@ -1,76 +1,82 @@
 # AI-Powered LMS Profile Assistant
 
-An AI-integrated LMS profile system that allows students to manage and update their profile using both manual UI interactions and natural language commands via a chatbot.
+An AI-integrated Learning Management System (LMS) that allows students to **view and update their profile using both manual UI interactions and natural language commands via a chatbot**.
 
-This project demonstrates:
+The system demonstrates secure authentication, backend–database integration, frontend–backend communication, and real-time UI updates triggered by chatbot actions.
 
-* Natural Language Processing (NLP)
-* Backend–database integration (SQLite)
-* Frontend–backend communication
-* Real-time UI updates based on chatbot actions
-* Clean modular architecture
+---
+
+## Live Deployment
+
+Frontend (Vercel):  
+https://lms-ai-murex.vercel.app/
+
+Backend (Render):  
+https://lms-ai-2-vlnb.onrender.com/
+
+---
+
+## Figma Design(Prototype Link)
+
+https://www.figma.com/proto/e2BELW4QBwQZ1qhMEyW0If/Untitled?node-id=0-1&t=u9LE2j3C1Edw1P9t-1
+
+---
+
+## Figma Design(Design Link)
+
+https://www.figma.com/design/e2BELW4QBwQZ1qhMEyW0If/Untitled?node-id=0-1&m=dev&t=u9LE2j3C1Edw1P9t-1
 
 ---
 
 ## Features
 
 ### Authentication
-
-* User registration (email + password)
-* Secure login with JWT
-* Password hashing using bcrypt
-* Protected profile routes
+- User registration and login (email + password)
+- JWT-based authentication
+- Password hashing
+- Protected profile and chatbot routes
 
 ---
 
 ### Profile Management
 
-Users can view and update:
+Users can view and update the following information:
 
-#### Personal Information
+**Personal Information**
+- Full name
+- Email
+- Phone
+- Date of birth
+- City
 
-* Full Name
-* Email
-* Phone
-* Date of Birth
-* City
+**Educational Information**
+- 10th board and percentage
+- 12th board and percentage
 
-#### Educational Information
-
-* 10th board + percentage
-* 12th board + percentage
-
-#### Course & Application Information
-
-* Enrolled course
-* Course duration & fee
-* Application status (submitted / under_review / accepted / rejected)
+**Course & Application Information (Read-Only)**
+- Enrolled course
+- Course duration and fee
+- Application status (submitted / under_review / accepted / rejected)
 
 ---
 
 ### AI Chatbot Assistant
 
-The AI chatbot allows users to:
+The chatbot allows users to interact using natural language:
 
-* Update profile fields using natural language
+**Profile Updates**
+- Example:  
+  “Update my 12th board to KSEAB”
 
-  * Example:
+**Profile Queries**
+- Example:  
+  “What is my tenth percentage?”
 
-    > “Update my 12th board to KSEAB”
+**Course & Application Queries**
+- Example:  
+  “What is my application status?”
 
-* Query profile data
-
-  * Example:
-
-    > “What is my tenth percentage?”
-
-* Check course & application status
-
-  * Example:
-
-    > “What is my application status?”
-
-The chatbot converts user input into structured database operations and reflects changes in real-time on the profile page.
+Profile changes made through the chatbot are reflected instantly on the profile page.
 
 ---
 
@@ -79,199 +85,126 @@ The chatbot converts user input into structured database operations and reflects
 ### Tech Stack
 
 **Frontend**
-
-* React
-* Modern CSS / Tailwind (if used)
-* Axios for API communication
+- React (Vite)
+- Fetch API
+- JWT stored in localStorage
+- Deployed on Vercel
 
 **Backend**
-
-* Node.js
-* Express.js
-* SQLite
-* JWT Authentication
-* bcrypt
+- Node.js
+- Express.js
+- SQLite
+- JWT Authentication
+- LangChain
+- Groq LLM
+- Deployed on Render
 
 ---
 
 ### System Flow
 
-1. User sends message to chatbot
-2. Backend parses intent (update / read)
-3. SQL query executed against SQLite
+1. User sends a message to the chatbot
+2. Backend detects intent (read / update)
+3. Database query is executed (SQL)
 4. Response returned to frontend
-5. Profile page re-fetches updated data
-6. UI updates instantly
+5. Profile data is re-fetched
+6. UI updates automatically
 
 ---
 
 ## Database Schema Overview
 
-### `students`
+- `students` – personal and authentication data
+- `education_details` – 10th and 12th academic details
+- `courses` – course catalog
+- `applications` – course enrollment and application status
 
-Stores personal information and authentication data.
-
-### `education_details`
-
-Stores 10th and 12th academic details (one-to-one relationship with student).
-
-### `courses`
-
-Defines LMS course offerings.
-
-### `applications`
-
-Tracks course enrollment and application status.
-
-Relational integrity is maintained via foreign keys and constraints.
+All data access is scoped to the authenticated student.
 
 ---
 
 ## NLP Strategy
 
-The chatbot follows a structured intent-detection flow:
+The chatbot follows a controlled intent-detection pipeline:
 
-1. Identify action:
+1. Detect action (read / update)
+2. Identify target field (personal / education / course)
+3. Map to SQL operation
+4. Execute query safely
 
-   * `update`
-   * `fetch`
-   * `status query`
-
-2. Identify entity:
-
-   * personal field
-   * education field
-   * course/application
-
-3. Map to SQL operation:
-
-   * `UPDATE`
-   * `SELECT`
-
-4. Execute database operation safely.
-
-This approach ensures:
-
-* Controlled database access
-* Predictable behavior
-* Safe query execution
+Known fields are handled using deterministic logic, while complex queries fall back to LangChain with Groq.
 
 ---
 
 ## Real-Time UI Updates
 
-After chatbot-triggered updates:
-
-* Backend confirms database write
-* Frontend re-fetches `/profile`
-* React state updates
-* UI reflects changes instantly
-
-No page refresh required.
+- Backend confirms database update
+- Frontend re-fetches `/profile`
+- React state updates
+- UI reflects changes instantly without page reload
 
 ---
 
 ## Project Structure
 
 ```
+
 backend/
- ├── server.js
- ├── db.js
- ├── routes/
- ├── controllers/
- ├── middleware/
+├── server.js
+├── db.js
+├── routes/
+├── controllers/
+├── middleware/
 
 frontend/
- ├── src/
- │   ├── components/
- │   ├── pages/
- │   ├── services/
-```
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── services/
 
-Separation of concerns ensures maintainability and scalability.
+```
 
 ---
 
-## Security Considerations
+## Security
 
-* Passwords hashed with bcrypt
-* JWT-based authentication
-* Protected API routes
-* Foreign key constraints in database
-* Input validation before DB operations
+- JWT-protected APIs
+- Student-scoped database queries
+- Password hashing
+- Environment-based secret management
+- Restricted CORS configuration
 
 ---
 
 ## API Endpoints
 
-### Auth
-
-* `POST /register`
-* `POST /login`
+### Authentication
+- POST /auth/register
+- POST /auth/login
 
 ### Profile
-
-* `GET /profile`
-* `PUT /profile/personal`
-* `PUT /profile/education`
+- GET /profile
+- PATCH /profile/personal
+- PATCH /profile/education
 
 ### Chatbot
-
-* `POST /chat`
-
----
-
-## Design Decisions
-
-* Floating chatbot button used to keep UI clean and non-intrusive.
-* SQLite chosen for lightweight relational structure.
-* Structured schema allows clear separation of student, education, and enrollment data.
-* Chatbot logic kept modular to allow future AI/LLM upgrades.
+- POST /chat
 
 ---
 
-## Future Improvements
+## Documentation
 
-* LLM integration for more advanced NLP
-* Role-based access (admin/instructor)
-* Course management module
-* Profile analytics
-* WebSocket-based live updates
+Low Level Design:  
+See `lld.md`
 
 ---
 
-## How to Run the Project
+## Assessment Coverage
 
-### Backend
-
-```
-cd backend
-npm install
-node server.js
+- ✅ Natural Language Understanding
+- ✅ Backend–Database Integration
+- ✅ Frontend–Backend Communication
+- ✅ Real-Time UI Updates
+- ✅ Secure System Architecture
 ```
 
-### Frontend
-
-```
-cd frontend
-npm install
-npm run dev
-```
-
----
-
-## Assessment Objectives Covered
-
-* ✅ Natural Language Understanding
-* ✅ Backend–Database Integration
-* ✅ Frontend–Backend Communication
-* ✅ Real-Time Profile Updates
-* ✅ Clean System Architecture
-
----
-
-## Conclusion
-
-This project demonstrates the integration of AI-driven user interaction within an LMS profile system, combining structured relational data with conversational interfaces in a scalable and maintainable architecture.
-
----
