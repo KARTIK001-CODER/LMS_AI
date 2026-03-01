@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ChatbotButton from '../components/ChatbotButton';
@@ -314,7 +314,7 @@ export default function Profile() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    const fetchProfile = () => {
+    const fetchProfile = useCallback(() => {
         setLoading(true);
         getProfile()
             .then((data) => setProfile(data))
@@ -325,21 +325,34 @@ export default function Profile() {
                 }
             })
             .finally(() => setLoading(false));
-    };
+    }, [navigate]);
 
-    useEffect(() => { fetchProfile(); }, [navigate]);
+    useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-    const handlePersonalSave = async (draft) => {
+    const handlePersonalSave = useCallback(async (draft) => {
         await updatePersonal(draft);
         fetchProfile();
-    };
+    }, [fetchProfile]);
 
-    const handleEducationSave = async (draft) => {
+    const handleEducationSave = useCallback(async (draft) => {
         await updateEducation(draft);
         fetchProfile();
-    };
+    }, [fetchProfile]);
 
-    // Calculate avatar initials dynamically
+    const personalFields = useMemo(() => [
+        { name: 'full_name', label: 'Full Name', value: profile?.personal?.full_name },
+        { name: 'email', label: 'Email Address', value: profile?.personal?.email, editable: false },
+        { name: 'phone', label: 'Phone Number', value: profile?.personal?.phone },
+        { name: 'city', label: 'Location / City', value: profile?.personal?.city },
+    ], [profile?.personal?.full_name, profile?.personal?.email, profile?.personal?.phone, profile?.personal?.city]);
+
+    const educationFields = useMemo(() => [
+        { name: 'tenth_board', label: '10th Board', value: profile?.education?.tenth_board },
+        { name: 'tenth_percentage', label: '10th Percentage', value: profile?.education?.tenth_percentage },
+        { name: 'twelfth_board', label: '12th Board', value: profile?.education?.twelfth_board },
+        { name: 'twelfth_percentage', label: '12th Percentage', value: profile?.education?.twelfth_percentage },
+    ], [profile?.education?.tenth_board, profile?.education?.tenth_percentage, profile?.education?.twelfth_board, profile?.education?.twelfth_percentage]);
+
     let initials = "UU";
     let fullName = "Unknown User";
     let roleStr = "Learner";
@@ -392,24 +405,14 @@ export default function Profile() {
                             avatarName={fullName}
                             avatarRole={roleStr}
                             onSaveReq={handlePersonalSave}
-                            fields={[
-                                { name: "full_name", label: "Full Name", value: profile.personal?.full_name },
-                                { name: "email", label: "Email Address", value: profile.personal?.email, editable: false },
-                                { name: "phone", label: "Phone Number", value: profile.personal?.phone },
-                                { name: "city", label: "Location / City", value: profile.personal?.city },
-                            ]}
+                            fields={personalFields}
                         />
 
                         {/* Education */}
                         <Section
                             title="Education"
                             onSaveReq={handleEducationSave}
-                            fields={[
-                                { name: "tenth_board", label: "10th Board", value: profile.education?.tenth_board },
-                                { name: "tenth_percentage", label: "10th Percentage", value: profile.education?.tenth_percentage },
-                                { name: "twelfth_board", label: "12th Board", value: profile.education?.twelfth_board },
-                                { name: "twelfth_percentage", label: "12th Percentage", value: profile.education?.twelfth_percentage },
-                            ]}
+                            fields={educationFields}
                         />
 
                         {/* Course Details */}

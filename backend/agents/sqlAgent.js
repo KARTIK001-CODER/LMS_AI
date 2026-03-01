@@ -5,13 +5,7 @@ const { createSqlAgent, SqlToolkit } = require("@langchain/classic/agents/toolki
 const { DataSource } = require("typeorm");
 const path = require("path");
 
-/**
- * Summarizes the student's profile structure using a standard LLM call
- * (does NOT use SQL Agent, simply formats object into a summary).
- */
 async function summarizeProfile(studentData) {
-    // We can use either OpenAI or Groq based on available keys
-    // Below uses ChatOpenAI as an OpenAI-compatible instance, or ChatGroq.
     const llm = process.env.GROQ_API_KEY
         ? new ChatGroq({ model: "llama-3.1-8b-instant", temperature: 0.3 })
         : new ChatOpenAI({ model: "gpt-4o-mini", temperature: 0.3 });
@@ -30,20 +24,23 @@ ${JSON.stringify(studentData, null, 2)}`;
     }
 }
 
-/**
- * Runs the LangChain SQL Agent for complex queries scoped strictly to the authenticated student
- */
-async function runSqlAgent(studentId, message) {
-    const datasource = new DataSource({
+let _datasource = null;
+let _sqlDb = null;
+
+async function getSharedDb() {
+    if (_datasource && _datasource.isInitialized) {
+        return _sqlDb;
+    }
+    _datasource = new DataSource({
         type: "sqlite",
         database: path.join(__dirname, "../kalviumlabs_forge.sqlite"),
     });
-
-    await datasource.initialize();
-
-    const db = await SqlDatabase.fromDataSourceParams({
-        appDataSource: datasource,
-    });
+    await _datasource.initialize();
+    _sqlDb = await SqlDatabase.fromDataSourceParams({ appDataSource: _datasource });
+    return _sqlDb;
+}
+async function runSqlAgent(studentId, message) {
+    const db = await getSharedDb();
 
     const llm = process.env.GROQ_API_KEY
         ? new ChatGroq({ model: "llama-3.1-8b-instant", temperature: 0 })
@@ -72,12 +69,8 @@ You have access to the SQLite database to answer the user's request securely. Wh
         maxIterations: 4,
     });
 
-    try {
-        const result = await executor.invoke({ input: message });
-        return result.output;
-    } finally {
-        await datasource.destroy();
-    }
+    const result = await executor.invoke({ input: message });
+    return result.output;
 }
 
 module.exports = {

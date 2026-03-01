@@ -1,65 +1,81 @@
 const db = require('../db');
 const { runSqlAgent, summarizeProfile } = require('../agents/sqlAgent');
 
-// ─────────────────────────────────────────────
-//  Helpers
-// ─────────────────────────────────────────────
-
 const msg = (text) => ({ reply: text });
 
 const lower = (s) => (s || '').toLowerCase();
 
-/** Pull the first value after a known trigger phrase, e.g. "update city to Pune" → "Pune" */
+
 const extractValue = (message) => {
-    const match = message.match(/\bto\s+(.+)$/i);
+    const match = message.match(/\b(?:to|as|:|is)\s+([\w\s.%@+\-]+)$/i);
     return match ? match[1].trim() : null;
 };
-
-// ─────────────────────────────────────────────
-//  Intent detection
-// ─────────────────────────────────────────────
-
 const isUpdate = (m) => /\b(update|change|set)\b/i.test(m);
 const isRead = (m) => /\b(what|show|tell|get|my)\b/i.test(m);
 const isSummary = (m) => {
     const text = lower(m);
     return text.includes('summarize my profile') || text.includes('brief overview');
 };
-
-// ─────────────────────────────────────────────
-//  Field routing
-// ─────────────────────────────────────────────
-
 const STUDENT_FIELDS = {
-    city: 'city',
-    phone: 'phone',
+    'full name': 'full_name',
+    'name': 'full_name',
+    'phone number': 'phone',
+    'mobile': 'phone',
+    'phone': 'phone',
+    'city': 'city',
+    'location': 'city',
 };
-
 const EDUCATION_FIELDS = {
+    'tenth percentage': 'tenth_percentage',
+    '10th percentage': 'tenth_percentage',
+    'tenth %': 'tenth_percentage',
+    '10th %': 'tenth_percentage',
+    'twelfth percentage': 'twelfth_percentage',
+    '12th percentage': 'twelfth_percentage',
+    'twelfth %': 'twelfth_percentage',
+    '12th %': 'twelfth_percentage',
     'tenth board': 'tenth_board',
     '10th board': 'tenth_board',
     'twelfth board': 'twelfth_board',
     '12th board': 'twelfth_board',
 };
-
+const STUDENT_READ_FIELDS = {
+    'full name': 'full_name',
+    'my name': 'full_name',
+    'name': 'full_name',
+    'email': 'email',
+    'phone': 'phone',
+    'phone number': 'phone',
+    'mobile': 'phone',
+    'city': 'city',
+    'location': 'city',
+};
 const READ_FIELDS = {
     'tenth percentage': 'tenth_percentage',
     '10th percentage': 'tenth_percentage',
+    'tenth %': 'tenth_percentage',
+    '10th %': 'tenth_percentage',
     'twelfth percentage': 'twelfth_percentage',
     '12th percentage': 'twelfth_percentage',
+    'twelfth %': 'twelfth_percentage',
+    '12th %': 'twelfth_percentage',
+    'tenth board': 'tenth_board',
+    '10th board': 'tenth_board',
+    'twelfth board': 'twelfth_board',
+    '12th board': 'twelfth_board',
     'course': 'course',
     'status': 'status',
     'enrolled': 'course',
+    'application': 'status',
 };
 
 const matchKey = (message, map) => {
     const m = lower(message);
-    return Object.keys(map).find((key) => m.includes(key)) || null;
+    return Object.keys(map)
+        .sort((a, b) => b.length - a.length)
+        .find((key) => m.includes(key)) || null;
 };
 
-// ─────────────────────────────────────────────
-//  Agent/LLM summary logic
-// ─────────────────────────────────────────────
 
 const handleSummary = async (studentId, res) => {
     try {
@@ -86,10 +102,6 @@ const handleSummary = async (studentId, res) => {
         return res.status(500).json(msg("Failed to summarize profile."));
     }
 };
-
-// ─────────────────────────────────────────────
-//  UPDATE handlers
-// ─────────────────────────────────────────────
 
 const updateStudentField = (studentId, column, value, res) => {
     const sql = `UPDATE students SET ${column} = ? WHERE id = ?`;
@@ -135,14 +147,30 @@ const updateEducationField = (studentId, column, value, res) => {
         }
     );
 };
+const readStudentField = (studentId, column, res) => {
+    db.get(
+        `SELECT full_name, email, phone, city FROM students WHERE id = ?`,
+        [studentId],
+        (err, row) => {
+            if (err) {
+                console.error('[chat] readStudentField error:', err.message);
+                return res.status(500).json(msg('Sorry, I could not read your profile.'));
+            }
+            if (!row) return res.json(msg("I couldn't find your profile."));
 
-// ─────────────────────────────────────────────
-//  READ handlers
-// ─────────────────────────────────────────────
-
+            const value = row[column];
+            const label = column.replace(/_/g, ' ');
+            if (value === null || value === undefined || value === '') {
+                return res.json(msg(`Your ${label} hasn't been recorded yet.`));
+            }
+            return res.json(msg(`Your ${label} is: ${value}`));
+        }
+    );
+};
 const readEducationField = (studentId, column, res) => {
     db.get(
-        'SELECT tenth_percentage, twelfth_percentage FROM education_details WHERE student_id = ?',
+        `SELECT tenth_board, tenth_percentage, twelfth_board, twelfth_percentage
+         FROM education_details WHERE student_id = ?`,
         [studentId],
         (err, row) => {
             if (err) {
@@ -153,10 +181,11 @@ const readEducationField = (studentId, column, res) => {
 
             const value = row[column];
             const label = column.replace(/_/g, ' ');
-            if (value === null || value === undefined) {
+            if (value === null || value === undefined || value === '') {
                 return res.json(msg(`Your ${label} hasn't been recorded yet.`));
             }
-            return res.json(msg(`Your ${label} is ${value}%.`));
+            const isPercentage = column.includes('percentage');
+            return res.json(msg(`Your ${label} is ${value}${isPercentage ? '%' : ''}.`));
         }
     );
 };
@@ -197,29 +226,28 @@ const handleRuleBasedFallback = (studentId, m, res, agentError = false) => {
     }
 
     if (isRead(m)) {
+        const studentReadKey = matchKey(m, STUDENT_READ_FIELDS);
+        if (studentReadKey) return readStudentField(studentId, STUDENT_READ_FIELDS[studentReadKey], res);
+
         const readKey = matchKey(m, READ_FIELDS);
         if (readKey) {
             const field = READ_FIELDS[readKey];
             if (field === 'tenth_percentage' || field === 'twelfth_percentage') return readEducationField(studentId, field, res);
+            if (field === 'tenth_board' || field === 'twelfth_board') return readEducationField(studentId, field, res);
             if (field === 'course') return readCourse(studentId, false, res);
             if (field === 'status') return readCourse(studentId, true, res);
         }
     }
 
-    // Default response if no deterministic pattern matches
     const messageOut = agentError
-        ? "I could not generate an answer right now. However, I can still help you update your city, phone, 10th board, or 12th board — or show you your percentages, course, and application status."
-        : "I can help you update your city, phone, 10th board, or 12th board — or show you your percentages, course, and application status. What would you like?";
+        ? "I could not generate an answer right now. I can help you with: viewing or updating your name, email, phone, city, 10th/12th board & percentage, course, and application status."
+        : "I can help you view or update your profile details — try asking about your name, phone, city, 10th/12th percentage, course, or application status.";
 
     return res.json(msg(messageOut));
 };
 
-// ─────────────────────────────────────────────
-//  Main controller
-// ─────────────────────────────────────────────
 
 const chat = async (req, res) => {
-    // 1. Read message and studentId
     const studentId = req.user?.id || req.studentId;
     if (!studentId) {
         return res.status(401).json(msg('Unauthorized.'));
@@ -231,29 +259,23 @@ const chat = async (req, res) => {
     }
 
     const m = message.trim();
-
-    // Check AI summary use case
     if (isSummary(m)) {
         return await handleSummary(studentId, res);
     }
-
-    // 2. Decide path: Simple query?
     const hasValue = !!extractValue(m);
-    const isDeterministicUpdate = isUpdate(m) && hasValue && (matchKey(m, STUDENT_FIELDS) || matchKey(m, EDUCATION_FIELDS));
-    const isDeterministicRead = isRead(m) && matchKey(m, READ_FIELDS) && m.split(' ').length <= 6; // To ensure simple structure 
+    const isDeterministicUpdate = isUpdate(m) && hasValue &&
+        (matchKey(m, STUDENT_FIELDS) || matchKey(m, EDUCATION_FIELDS));
+    const isDeterministicRead = isRead(m) &&
+        (matchKey(m, STUDENT_READ_FIELDS) || matchKey(m, READ_FIELDS));
 
     if (isDeterministicUpdate || isDeterministicRead) {
-        // Use existing rule-based logic
         return handleRuleBasedFallback(studentId, m, res);
     }
-
-    // Else: Use LangChain SQL Agent 
     try {
         const reply = await runSqlAgent(studentId, m);
         return res.json(msg(reply));
     } catch (error) {
         console.error("Langchain SQL Agent Failed:", error);
-        // Fallback to rule-based logic if agent fails
         return handleRuleBasedFallback(studentId, m, res, true);
     }
 };
