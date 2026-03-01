@@ -1,4 +1,4 @@
 node_modules
 package-lock.json
-kalviumlabs_forge.sqlite
+# kalviumlabs_forge.sqlite
 .env
