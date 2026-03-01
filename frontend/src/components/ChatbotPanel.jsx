@@ -11,6 +11,7 @@ const ChatbotPanel = ({ onClose, onUpdate }) => {
     const bottomRef = useRef(null);
 
     const [isLoading, setIsLoading] = useState(false);
+    const isSendingRef = useRef(false);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -18,8 +19,9 @@ const ChatbotPanel = ({ onClose, onUpdate }) => {
 
     const sendMessage = async () => {
         const text = input.trim();
-        if (!text) return;
+        if (!text || isSendingRef.current) return;
 
+        isSendingRef.current = true;
         const userMsg = { id: Date.now(), sender: 'user', text };
         setMessages((prev) => [...prev, userMsg]);
         setInput('');
@@ -36,9 +38,11 @@ const ChatbotPanel = ({ onClose, onUpdate }) => {
                 text: replyText,
             };
             setMessages((prev) => [...prev, aiMsg]);
-
-            // If the response indicates an update, notify the parent to refresh profile
-            if (replyText.toLowerCase().includes('successfully') || replyText.toLowerCase().includes('updated') || replyText.toLowerCase().includes('saved')) {
+            if (
+                replyText.toLowerCase().includes('successfully') ||
+                replyText.toLowerCase().includes('updated') ||
+                replyText.toLowerCase().includes('saved')
+            ) {
                 onUpdate?.();
             }
         } catch (error) {
@@ -51,6 +55,7 @@ const ChatbotPanel = ({ onClose, onUpdate }) => {
             setMessages((prev) => [...prev, errorMsg]);
         } finally {
             setIsLoading(false);
+            isSendingRef.current = false;
         }
     };
 
