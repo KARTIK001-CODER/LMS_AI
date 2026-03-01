@@ -7,12 +7,17 @@ const db = require("./db");
 const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://lms-ai-murex.vercel.app" 
+];
 
-// ✅ Middleware MUST come BEFORE routes
 app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  origin: allowedOrigins,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, 
+  optionsSuccessStatus: 200 
 }));
 app.use(express.json());
 
