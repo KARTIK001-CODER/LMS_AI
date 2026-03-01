@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { API_BASE } from '../config';
 
 const authHeaders = () => {
     const token = localStorage.getItem('token');
@@ -12,7 +12,7 @@ export const getProfile = async () => {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('No token found');
 
-    const response = await fetch(`${API_BASE_URL}/profile`, {
+    const response = await fetch(`${API_BASE}/profile`, {
         method: 'GET',
         headers: authHeaders(),
     });
@@ -33,7 +33,7 @@ export const updatePersonal = async (data) => {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('No token found');
 
-    const response = await fetch(`${API_BASE_URL}/profile/personal`, {
+    const response = await fetch(`${API_BASE}/profile/personal`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(data),
@@ -50,7 +50,7 @@ export const updateEducation = async (data) => {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('No token found');
 
-    const response = await fetch(`${API_BASE_URL}/profile/education`, {
+    const response = await fetch(`${API_BASE}/profile/education`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(data),

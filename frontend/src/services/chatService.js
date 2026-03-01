@@ -1,7 +1,7 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { API_BASE } from '../config';
 
 export const sendChatMessage = async (token, message) => {
-    const response = await fetch(`${API_BASE_URL}/chat`, {
+    const response = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
